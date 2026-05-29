@@ -14,7 +14,7 @@ from PIL import Image
 # ============================================
 
 st.set_page_config(
-    page_title="Personal Finance AI",
+    page_title="Wallee",
     page_icon="💸",
     layout="wide"
 )
@@ -36,7 +36,7 @@ df = load_data()
 # SIDEBAR
 # ============================================
 
-st.sidebar.title("💸 Personal Finance AI")
+st.sidebar.title("💸 Wallee")
 
 # ============================================
 # DATE FILTER
@@ -206,7 +206,7 @@ if total_spending > 3000000:
 
 if menu == "Dashboard":
 
-    st.title("💸 AI Personal Finance Assistant")
+    st.title("💸 Wallee: Smart Money, Happy Life")
 
     left, right = st.columns([3,1])
 
