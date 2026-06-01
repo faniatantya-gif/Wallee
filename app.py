@@ -9,9 +9,15 @@ from PIL import Image
 
 st.set_page_config(
     page_title="Wallee",
-    page_icon="💸",
+    page_icon="Wallee Logo.png",
     layout="wide"
 )
+
+# ============================================
+# LOGO
+# ============================================
+
+logo = Image.open("Wallee Logo.png")
 
 # ============================================
 # LOAD DATA
@@ -30,7 +36,10 @@ df = load_data()
 # SIDEBAR
 # ============================================
 
-st.sidebar.title("💸 Wallee")
+st.sidebar.image(
+    logo,
+    width=100
+)
 
 # ============================================
 # DATE FILTER
@@ -65,7 +74,7 @@ menu = st.sidebar.radio(
     "Navigation",
     [
         "Dashboard",
-        "OCR Categorization",
+        "Categorization",
         "Behavior Analysis"
     ]
 )
@@ -85,6 +94,10 @@ selected_user = st.sidebar.selectbox(
 df = df[
     df["user_id"] == selected_user
 ]
+
+if df.empty:
+    st.warning("⚠️ Tidak ada transaksi untuk filter yang dipilih.")
+    st.stop()
 
 # ============================================
 # GLOBAL METRICS
@@ -108,10 +121,10 @@ food_ratio = (
     else 0
 )
 
-digital_ratio = (
-    df["is_digital_payment"]
-    .mean()
-)
+# digital_ratio = (
+#     df["is_digital_payment"]
+#     .mean()
+# )
 
 weekend_spending = (
     df[df["is_weekend"] == 1]
@@ -125,35 +138,12 @@ weekday_spending = (
     .sum()
 )
 
-    # # ====================================
-    # # BASIC METRICS
-    # # ====================================
-
 total_transactions = len(df)
-total_spending = df["total_harga"].sum()
 avg_spending = df["total_harga"].mean()
-
-food_spending = (
-    df[df["kategori"] == "makanan & minuman"]
-    ["total_harga"]
-    .sum()
-)
-
-food_ratio = (
-    food_spending / total_spending
-    if total_spending > 0
-    else 0
-)
 
 digital_ratio = (
     df["is_digital_payment"]
     .mean()
-)
-
-weekend_spending = (
-    df[df["is_weekend"] == 1]
-    ["total_harga"]
-    .sum()
 )
 
 weekday_spending = (
@@ -218,15 +208,13 @@ if menu == "Dashboard":
         )
 
     top_category = (
-        df["kategori"]
-        .value_counts()
-        .idxmax()
+        df["kategori"].value_counts().idxmax()
+        if not df.empty else "-"
     )
 
     top_merchant = (
-        df["merchant"]
-        .value_counts()
-        .idxmax()
+        df["merchant"].value_counts().idxmax()
+        if not df.empty else "-"
     )
 
     # ====================================
@@ -388,6 +376,10 @@ if menu == "Dashboard":
         .map(month_names)
     )
 
+    monthly_df["label_rp"] = monthly_df["total_harga"].apply(
+        format_rupiah
+    )
+
     fig_month = px.line(
         monthly_df,
         x="nama_bulan",
@@ -423,7 +415,15 @@ if menu == "Dashboard":
 
     fig_month.update_traces(
         line=dict(width=4),
-        marker=dict(size=10)
+        marker=dict(size=10),
+        hovertemplate=
+        "<b>%{x}</b><br>" +
+        "Pengeluaran: Rp %{y:,.0f}<extra></extra>"
+    )
+    fig_month.update_layout(
+        yaxis_title="Total Spending (Rp)",
+        xaxis_title="Bulan",
+        hovermode="x unified"
     )
 
     st.divider()
@@ -484,7 +484,102 @@ if menu == "Dashboard":
         Pertimbangkan menetapkan batas anggaran bulanan agar pengeluaran lebih terkontrol.
         """
             )
+        
+    # ====================================
+    # WEEKEND VS WEEKDAY ANALYSIS
+    # ====================================
+    weekend_df = pd.DataFrame({
+        "Periode": [
+            "Weekday",
+            "Weekend"
+        ],
+        "Total Spending": [
+            weekday_spending,
+            weekend_spending
+        ]
+    })
 
+    fig_weekend = px.pie(
+        weekend_df,
+        names="Periode",
+        values="Total Spending",
+        hole=0.5,
+        title="Weekend vs Weekday Spending",
+        color_discrete_sequence=[
+            "#0B3D91",
+            "#9EC5FE"
+        ]
+    )
+
+    fig_weekend.update_traces(
+        hovertemplate=
+        "<b>%{label}</b><br>" +
+        "Total Pengeluaran: Rp %{value:,.0f}<br>" +
+        "Persentase: %{percent}<extra></extra>"
+    )
+
+    st.divider()
+
+    left, right = st.columns([2,1])
+
+    with left:
+
+        st.plotly_chart(
+            fig_weekend,
+            use_container_width=True
+        )
+
+    with right:
+        weekend_ratio = (
+            weekend_spending
+            /
+            total_spending
+            * 100
+        ) if total_spending > 0 else 0
+        if weekend_ratio >= 50:
+
+            status = "🔴 Tinggi"
+
+            recommendation = """
+            Sebagian besar pengeluaran terjadi pada akhir pekan.
+            Pertimbangkan menetapkan batas pengeluaran untuk aktivitas rekreasi atau hiburan.
+            """
+
+        elif weekend_ratio >= 35:
+
+            status = "🟡 Sedang"
+
+            recommendation = """
+            Pengeluaran akhir pekan cukup signifikan.
+            Tetap pantau transaksi agar tidak melebihi anggaran bulanan.
+            """
+
+        else:
+
+            status = "🟢 Normal"
+
+            recommendation = """
+            Distribusi pengeluaran antara hari kerja dan akhir pekan cukup seimbang.
+            """
+
+            st.write("### 📅 Spending Pattern")
+
+            st.info(
+                f"""
+                Pengeluaran akhir pekan mencapai **{weekend_ratio:.1f}%**
+                dari total pengeluaran.
+
+                Status: **{status}**
+                """
+            )
+
+            st.warning(
+                f"""
+                📌 Rekomendasi:
+
+                {recommendation}
+                """
+            )
     # ====================================
     # CATEGORY ANALYSIS
     # ====================================
@@ -519,7 +614,10 @@ if menu == "Dashboard":
     )
 
     fig_category.update_traces(
-        marker_color=colors
+        marker_color=colors,
+        hovertemplate=
+        "<b>%{x}</b><br>" +
+        "Jumlah Transaksi: %{y}<extra></extra>"
     )
 
     st.divider()
@@ -575,6 +673,13 @@ if menu == "Dashboard":
         .reset_index()
     )
 
+    merchant_df["persentase"] = (
+        merchant_df["total_harga"]
+        /
+        merchant_df["total_harga"].sum()
+        * 100
+    ).round(1)
+
     colors = [
         "#0B3D91"
         if x == merchant_df["total_harga"].max()
@@ -590,7 +695,12 @@ if menu == "Dashboard":
     )
 
     fig_merchant.update_traces(
-        marker_color=colors
+        marker_color=colors,
+        customdata=merchant_df[["persentase"]],
+        hovertemplate=
+        "<b>%{x}</b><br>" +
+        "Total Pengeluaran: Rp %{y:,.0f}<br>" +
+        "Kontribusi: %{customdata[0]}%<extra></extra>"
     )
 
     st.divider()
@@ -648,12 +758,27 @@ if menu == "Dashboard":
         "count"
     ]
 
+    payment_df["persentase"] = (
+        payment_df["count"]
+        /
+        payment_df["count"].sum()
+        * 100
+    ).round(1)
+
     fig_payment = px.pie(
         payment_df,
         names="payment_method",
         values="count",
         title="Payment Method Distribution",
         color_discrete_sequence=px.colors.sequential.Blues_r
+    )
+
+    fig_payment.update_traces(
+        customdata=payment_df[["persentase"]],
+        hovertemplate=
+        "<b>%{label}</b><br>" +
+        "Jumlah Transaksi: %{value}<br>" +
+        "Persentase: %{customdata[0]}%<extra></extra>"
     )
 
     st.divider()
@@ -722,16 +847,14 @@ if menu == "Dashboard":
     """
     )
 
-# ============================================
 # OCR CATEGORIZATION
-# ============================================
 
-elif menu == "OCR Categorization":
+elif menu == "Categorization":
 
-    st.title("🧠 OCR Transaction Categorization")
+    st.title("🧠 Transaction Categorization")
 
     st.markdown(
-        "Simulate OCR categorization using transaction text"
+        "Simulate categorization using transaction text"
     )
 
     user_input = st.text_input(
@@ -743,9 +866,7 @@ elif menu == "OCR Categorization":
 
         text = user_input.lower()
 
-        # ====================================
         # SIMPLE RULE-BASED DEMO
-        # ====================================
 
         knowledge_base = {}
 
@@ -847,6 +968,10 @@ elif menu == "Behavior Analysis":
             {behavior}"""
         )
 
+    # ====================================
+    # USER SPENDING BY CATEGORY
+    # ====================================
+
     st.subheader("User Spending by Category")
 
     user_category = (
@@ -854,16 +979,11 @@ elif menu == "Behavior Analysis":
         .groupby("kategori")["total_harga"]
         .sum()
         .reset_index()
-        .sort_values(
-            by="total_harga",
-            ascending=False
-        )
+        .sort_values(by="total_harga", ascending=False)
     )
 
     colors = [
-        "#0B3D91"
-        if x == user_category["total_harga"].max()
-        else "#9EC5FE"
+        "#0B3D91" if x == user_category["total_harga"].max() else "#9EC5FE"
         for x in user_category["total_harga"]
     ]
 
@@ -871,7 +991,7 @@ elif menu == "Behavior Analysis":
         user_category,
         x="kategori",
         y="total_harga",
-        text_auto=True,
+        text="total_harga",
         labels={
             "kategori": "Kategori",
             "total_harga": "Total Pengeluaran"
@@ -879,10 +999,90 @@ elif menu == "Behavior Analysis":
     )
 
     fig4.update_traces(
-        marker_color=colors
+        marker_color=colors,
+        texttemplate="Rp %{y:,.0f}",
+        textposition="outside",
+        hovertemplate=(
+            "Kategori: %{x}<br>"
+            "Total Pengeluaran: Rp %{y:,.0f}<br>"
+            "<extra></extra>"
+        )
     )
 
-    st.plotly_chart(fig4, use_container_width=True)
+    fig4.update_layout(
+        yaxis_title="Total Pengeluaran (Rp)",
+        xaxis_title="Kategori",
+        showlegend=False
+    )
+
+    st.plotly_chart(
+        fig4,
+        use_container_width=True
+    )
+
+    # ====================================
+    # SPENDING BY DAY
+    # ====================================
+
+    user_df["day_name"] = user_df["date"].dt.day_name()
+
+    weekday_df = (
+        user_df.groupby("day_name")["total_harga"]
+        .sum()
+        .reset_index()
+    )
+
+    order = [
+        "Monday", "Tuesday", "Wednesday",
+        "Thursday", "Friday", "Saturday", "Sunday"
+    ]
+
+    weekday_df = weekday_df.set_index("day_name")
+    weekday_df = weekday_df.reindex(order, fill_value=0)
+    weekday_df = weekday_df.reset_index()
+
+    weekday_df["day_name"] = pd.Categorical(
+        weekday_df["day_name"],
+        categories=order,
+        ordered=True
+    )
+
+    weekday_df = weekday_df.sort_values("day_name")
+
+    colors = [
+        "#0B3D91" if x == weekday_df["total_harga"].max() else "#9EC5FE"
+        for x in weekday_df["total_harga"]
+    ]
+
+    fig_weekday = px.bar(
+        weekday_df,
+        x="day_name",
+        y="total_harga",
+        title="Spending by Day",
+        text="total_harga"
+    )
+
+    fig_weekday.update_traces(
+        marker_color=colors,
+        texttemplate="Rp %{y:,.0f}",
+        textposition="outside",
+        hovertemplate=(
+            "Hari: %{x}<br>"
+            "Total Spending: Rp %{y:,.0f}<br>"
+            "<extra></extra>"
+        )
+    )
+
+    fig_weekday.update_layout(
+        xaxis_title="Day",
+        yaxis_title="Total Spending (Rp)",
+        showlegend=False
+    )
+
+    st.plotly_chart(
+        fig_weekday,
+        use_container_width=True
+    )
 
     st.subheader("🧾 Recent Transactions")
 

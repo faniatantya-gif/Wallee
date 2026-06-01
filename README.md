@@ -10,7 +10,7 @@ Pengelolaan keuangan pribadi sering kali menjadi tantangan karena banyaknya tran
 * Menganalisis perilaku keuangan
 * Mengidentifikasi kategori pengeluaran dominan
 * Memahami pola transaksi berdasarkan merchant dan metode pembayaran
-* Mengotomatisasi kategorisasi transaksi menggunakan OCR-based categorization
+* Mengotomatisasi kategorisasi transaksi
 
 ## 🚀 Features
 
@@ -28,6 +28,8 @@ Menampilkan ringkasan kondisi keuangan pengguna dalam bentuk visualisasi interak
 * Merchant analysis
 * Payment method analysis
 * Financial summary
+* Spending by Day
+* Weekend and Weekday Spending
 
 ### 🧠 Transaction Categorization
 
