@@ -101,7 +101,7 @@ Clone repository:
 
 ```bash
 git clone https://github.com/faniatantya-gif/Wallee.git
-cd Wallee-master
+cd Wallee
 ```
 
 Install dependencies:
