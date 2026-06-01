@@ -1,12 +1,6 @@
-# Personal Finance AI - Streamlit App
-# ============================================
-# PERSONAL FINANCE AI STREAMLIT APP
-# ============================================
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from PIL import Image
 
 # ============================================
@@ -914,5 +908,3 @@ elif menu == "Behavior Analysis":
         recent_transactions,
         use_container_width=True
     )
-
-    
